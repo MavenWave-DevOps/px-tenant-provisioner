@@ -40,6 +40,7 @@ type TenantNamespaceStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:path=TenantNamespace,scope=Cluster
 
 // TenantNamespace is the Schema for the tenantnamespaces API
 type TenantNamespace struct {

@@ -34,15 +34,20 @@ type TenantNamespaceReconciler struct {
 	Scheme *runtime.Scheme
 }
 
+var namespaceConfig projectxv1.TenantNamespace
+
 func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, spec projectxv1.TenantNamespaceSpec) error {
 	ns := &core.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: spec.Namespace,
+			Name:        spec.Namespace,
+			Annotations: namespaceConfig.GetAnnotations(),
+			Labels:      namespaceConfig.GetLabels(),
 		},
 	}
-	//if err := controllerutil.SetControllerReference(&tenantConfig, ns, r.Scheme); err != nil {
-	//	l.Error(err, "couldnt set namespace ref")
-	//}
+	if err := ctrl.SetControllerReference(&namespaceConfig, ns, r.Scheme); err != nil {
+		return err
+	}
+	l.Info("Creating namespace", "ns config", ns)
 	if err := r.Create(ctx, ns); err != nil {
 		return err
 	} else {
@@ -66,12 +71,12 @@ func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, spec pr
 func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l = log.FromContext(ctx)
 	//Check to see if we should create the namespace
-	var namespaceConfig projectxv1.TenantNamespace
 	if err := r.Get(ctx, req.NamespacedName, &namespaceConfig); err != nil {
 		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
 	}
 	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
+	l.Info("Config: ", "conf - ", namespaceConfig)
 
 	if err := r.CreateNamespace(ctx, namespaceConfig.Spec); err != nil {
 		l.Error(err, "could not create namespace")
