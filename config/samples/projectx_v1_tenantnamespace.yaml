@@ -1,0 +1,7 @@
+apiVersion: projectx.github.com/v1
+kind: TenantNamespace
+metadata:
+  name: tenantnamespace-sample
+  namespace: default
+spec:
+  namespace: example

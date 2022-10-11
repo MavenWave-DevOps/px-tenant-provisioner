@@ -35,13 +35,9 @@ spec:
           spec:
             description: TenantBootstrapSpec defines the desired state of TenantBootstrap
             properties:
-              createNamespace:
+              rbac:
                 description: 'INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
                   Important: Run "make" to regenerate code after modifying this file'
-                type: boolean
-              namespace:
-                type: string
-              rbac:
                 items:
                   properties:
                     roleName:
@@ -91,8 +87,6 @@ spec:
                   type: object
                 type: array
             required:
-            - createNamespace
-            - namespace
             - rbac
             type: object
           status:

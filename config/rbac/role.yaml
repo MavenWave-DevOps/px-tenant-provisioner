@@ -8,6 +8,12 @@ rules:
 - apiGroups:
   - projectx.github.com
   resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - projectx.github.com
+  resources:
   - tenantbootstraps
   verbs:
   - create
@@ -27,6 +33,32 @@ rules:
   - projectx.github.com
   resources:
   - tenantbootstraps/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - tenantnamespaces
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - tenantnamespaces/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - tenantnamespaces/status
   verbs:
   - get
   - patch

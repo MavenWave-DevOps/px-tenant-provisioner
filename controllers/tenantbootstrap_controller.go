@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 // TenantBootstrapReconciler reconciles a TenantBootstrap object
@@ -50,10 +50,12 @@ type User struct {
 }
 
 var l logr.Logger
+var tenantConfig projectxv1.TenantBootstrap
 
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantbootstraps,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantbootstraps/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantbootstraps/finalizers,verbs=update
+//+kubebuilder:rbac:groups=projectx.github.com,resources=*,verbs=*
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -64,20 +66,6 @@ var l logr.Logger
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
-
-func (r *TenantBootstrapReconciler) CreateNamespace(ctx context.Context, spec projectxv1.TenantBootstrapSpec) error {
-	ns := core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: spec.Namespace,
-		},
-	}
-
-	if err := r.Create(ctx, &ns); err != nil {
-		return err
-	} else {
-		return nil
-	}
-}
 
 func ConstructRule(rule projectxv1.RbacRule) rbacv1.PolicyRule {
 	return rbacv1.PolicyRule{
@@ -122,13 +110,17 @@ func (u *User) CreateIdentity(ctx context.Context, s projectxv1.Subject, r *Tena
 }
 
 func (sa *ServiceAccount) CreateIdentity(ctx context.Context, s projectxv1.Subject, r *TenantBootstrapReconciler, ns string) error {
-	newSa := core.ServiceAccount{
+	newSa := &core.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      s.Name,
 			Namespace: ns,
 		},
 	}
-	if err := r.Create(ctx, &newSa); err != nil {
+	if err := controllerutil.SetControllerReference(&tenantConfig, newSa, r.Scheme); err != nil {
+		l.Error(err, "couldnt set namespace ref")
+	}
+
+	if err := r.Create(ctx, newSa); err != nil {
 		return err
 	}
 	return nil
@@ -149,9 +141,12 @@ func (r *TenantBootstrapReconciler) ConstructRoleBinding(rn string, ns string, s
 }
 
 func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, spec projectxv1.TenantBootstrapSpec) error {
-	ns := spec.Namespace
+	ns := tenantConfig.Namespace
 	for _, roleConfig := range spec.Rbac {
 		role := ConstructRole(roleConfig, ns)
+		if err := controllerutil.SetControllerReference(&tenantConfig, &role, r.Scheme); err != nil {
+			l.Error(err, "couldnt set namespace ref")
+		}
 		if err := r.Create(ctx, &role); err != nil {
 			return err
 		}
@@ -181,6 +176,9 @@ func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, spec project
 			}
 		}
 		rb := r.ConstructRoleBinding(roleConfig.RoleName, ns, subjects)
+		if err := controllerutil.SetControllerReference(&tenantConfig, &rb, r.Scheme); err != nil {
+			l.Error(err, "couldnt set namespace ref")
+		}
 		if err := r.Create(ctx, &rb); err != nil {
 			l.Error(err, "couldnt create role binding")
 		}
@@ -188,19 +186,13 @@ func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, spec project
 	return nil
 }
 func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	l = log.FromContext(ctx)
-	var tenantConfig projectxv1.TenantBootstrap
+
 	if err := r.Get(ctx, req.NamespacedName, &tenantConfig); err != nil {
-		l.Error(err, "Unable to load deployment")
+		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
 	}
+	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
 
-	//Check to see if we should create the namespace
-	if tenantConfig.Spec.CreateNamespace {
-		if err := r.CreateNamespace(ctx, tenantConfig.Spec); err != nil {
-			l.Error(err, "could not create namespace")
-		}
-	}
 	if err := r.CreateRbac(ctx, tenantConfig.Spec); err != nil {
 		l.Error(err, "could not create rbac")
 	}

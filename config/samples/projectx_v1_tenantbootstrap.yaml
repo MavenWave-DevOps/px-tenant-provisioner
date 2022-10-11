@@ -2,14 +2,13 @@ apiVersion: projectx.github.com/v1
 kind: TenantBootstrap
 metadata:
   name: tenantbootstrap-sample
-spec:
-  createNamespace: true
   namespace: example
+spec:
   rbac:
     - roleName: viewer
       subjects:
         - kind: ServiceAccount
-          name: example-admin
+          name: example-viewer
           create: true
       rules:
         - apiGroups:

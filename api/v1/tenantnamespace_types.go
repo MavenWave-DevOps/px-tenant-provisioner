@@ -23,34 +23,17 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// RbacRule defines a set of k8s rbac rules for a role
-type RbacRule struct {
-	ApiGroups []string `json:"apiGroups"`
-	Resources []string `json:"resources"`
-	Verbs     []string `json:"verbs"`
-}
-
-type Subject struct {
-	Kind   string `json:"kind"`
-	Name   string `json:"name"`
-	Create bool   `json:"create"`
-}
-
-type Rbac struct {
-	RoleName string     `json:"roleName"`
-	Subjects []Subject  `json:"subjects"`
-	Rules    []RbacRule `json:"rules"`
-}
-
-// TenantBootstrapSpec defines the desired state of TenantBootstrap
-type TenantBootstrapSpec struct {
+// TenantNamespaceSpec defines the desired state of TenantNamespace
+type TenantNamespaceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Rbac []Rbac `json:"rbac"`
+
+	// Foo is an example field of TenantNamespace. Edit tenantnamespace_types.go to remove/update
+	Namespace string `json:"namespace"`
 }
 
-// TenantBootstrapStatus defines the observed state of TenantBootstrap
-type TenantBootstrapStatus struct {
+// TenantNamespaceStatus defines the observed state of TenantNamespace
+type TenantNamespaceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 }
@@ -58,24 +41,24 @@ type TenantBootstrapStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// TenantBootstrap is the Schema for the tenantbootstraps API
-type TenantBootstrap struct {
+// TenantNamespace is the Schema for the tenantnamespaces API
+type TenantNamespace struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   TenantBootstrapSpec   `json:"spec,omitempty"`
-	Status TenantBootstrapStatus `json:"status,omitempty"`
+	Spec   TenantNamespaceSpec   `json:"spec,omitempty"`
+	Status TenantNamespaceStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// TenantBootstrapList contains a list of TenantBootstrap
-type TenantBootstrapList struct {
+// TenantNamespaceList contains a list of TenantNamespace
+type TenantNamespaceList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []TenantBootstrap `json:"items"`
+	Items           []TenantNamespace `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&TenantBootstrap{}, &TenantBootstrapList{})
+	SchemeBuilder.Register(&TenantNamespace{}, &TenantNamespaceList{})
 }
