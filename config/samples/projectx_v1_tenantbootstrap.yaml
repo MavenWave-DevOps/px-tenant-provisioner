@@ -2,13 +2,13 @@ apiVersion: projectx.github.com/v1
 kind: TenantBootstrap
 metadata:
   name: tenantbootstrap-sample
-  namespace: example-app
 spec:
   createNamespace: true
+  namespace: example
   rbac:
     - roleName: viewer
       subjects:
-        - kind: serviceAccount
+        - kind: ServiceAccount
           name: example-admin
           create: true
       rules:
@@ -22,7 +22,7 @@ spec:
             - list
     - roleName: admin
       subjects:
-        - kind: serviceAccount
+        - kind: ServiceAccount
           name: example-admin
           create: true
       rules:

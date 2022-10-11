@@ -27,27 +27,28 @@ import (
 type RbacRule struct {
 	ApiGroups []string `json:"apiGroups"`
 	Resources []string `json:"resources"`
-	Verbs []string `json:"verbs"`
+	Verbs     []string `json:"verbs"`
 }
 
 type Subject struct {
-	Kind string `json:"kind"`
-	Name string `json:"name"`
-	Create bool `json:"create"`
+	Kind   string `json:"kind"`
+	Name   string `json:"name"`
+	Create bool   `json:"create"`
 }
 
 type Rbac struct {
-	RoleName string `json:"roleName"`
-	Subjects []Subject `json:"subject"`
-	Rules []RbacRule `json:"rules"`
+	RoleName string     `json:"roleName"`
+	Subjects []Subject  `json:"subjects"`
+	Rules    []RbacRule `json:"rules"`
 }
 
 // TenantBootstrapSpec defines the desired state of TenantBootstrap
 type TenantBootstrapSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	CreateNamespace bool `json:"createNamespace"`
-	Rbac []Rbac `json:"rbac"`
+	CreateNamespace bool   `json:"createNamespace"`
+	Namespace       string `json:"namespace"`
+	Rbac            []Rbac `json:"rbac"`
 }
 
 // TenantBootstrapStatus defines the observed state of TenantBootstrap
