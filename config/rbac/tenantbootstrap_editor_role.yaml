@@ -1,0 +1,24 @@
+# permissions for end users to edit tenantbootstraps.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tenantbootstrap-editor-role
+rules:
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - tenantbootstraps
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - tenantbootstraps/status
+  verbs:
+  - get

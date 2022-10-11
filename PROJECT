@@ -1,0 +1,16 @@
+domain: github.com
+layout:
+- go.kubebuilder.io/v3
+projectName: tenant-bootstrap
+repo: github.com/tony-mw/tenant-bootstrap
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: github.com
+  group: projectx
+  kind: TenantBootstrap
+  path: github.com/tony-mw/tenant-bootstrap/api/v1
+  version: v1
+version: "3"
