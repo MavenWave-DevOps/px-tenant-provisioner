@@ -42,14 +42,14 @@ type SubjectKind interface {
 }
 
 type ServiceAccount struct {
-	Kind string
-	Name string
+	Kind      string
+	Name      string
 	Namespace string
 }
 
 type User struct {
-	Kind string
-	Name string
+	Kind      string
+	Name      string
 	Namespace string
 }
 

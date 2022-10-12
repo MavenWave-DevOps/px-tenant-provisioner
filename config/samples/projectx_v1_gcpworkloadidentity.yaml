@@ -3,4 +3,17 @@ kind: GcpWorkloadIdentity
 metadata:
   name: gcpworkloadidentity-sample
 spec:
-  # TODO(user): Add fields here
+  kubernetes:
+    serviceAccountName: tenant-provisioner
+    namespace: default
+  gcp:
+    projectId: test
+    serviceAccountName: workload-tenant-provisioner
+    iamRoles:
+      - "roles/iam.securityAdmin"
+    auth:
+      serviceAccountName: admin
+      projectId: test
+      clusterLocation: us-west4
+      clusterName: fill-me-in
+      namespace: default

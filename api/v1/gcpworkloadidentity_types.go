@@ -23,20 +23,28 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-
 type K8sWorkloadIdentityConfig struct {
 	ServiceAccountName string `json:"serviceAccountName"`
-	Namespace string `json:"namespace"`
+	Namespace          string `json:"namespace"`
+}
+
+type Auth struct {
+	ServiceAccountName string `json:"serviceAccountName"`
+	ProjectId          string `json:"projectId"`
+	ClusterLocation    string `json:"clusterLocation"`
+	ClusterName        string `json:"clusterName"`
+	Namespace          string `json:"namespace"`
 }
 
 type GcpWorkloadIdentityConfig struct {
-	ProjectId string `json:"projectId"`
-	ServiceAccountName string `json:"serviceAccountName"`
-	IamRoles []string `json:"iamRoles"`
+	ProjectId          string   `json:"projectId"`
+	ServiceAccountName string   `json:"serviceAccountName"`
+	IamRoles           []string `json:"iamRoles"`
+	WlAuth             Auth     `json:"auth"`
 }
 type WorkloadIdentityConfig struct {
 	Kubernetes K8sWorkloadIdentityConfig `json:"kubernetes"`
-	Gcp GcpWorkloadIdentityConfig `json:"gcp"`
+	Gcp        GcpWorkloadIdentityConfig `json:"gcp"`
 }
 
 // GcpWorkloadIdentitySpec defines the desired state of GcpWorkloadIdentity
