@@ -1,0 +1,24 @@
+# permissions for end users to edit gcpworkloadidentities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gcpworkloadidentity-editor-role
+rules:
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - gcpworkloadidentities
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projectx.github.com
+  resources:
+  - gcpworkloadidentities/status
+  verbs:
+  - get

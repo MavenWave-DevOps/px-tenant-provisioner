@@ -70,7 +70,7 @@ func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, spec pr
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l = log.FromContext(ctx)
-	//Check to see if we should create the namespace
+
 	if err := r.Get(ctx, req.NamespacedName, &namespaceConfig); err != nil {
 		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
