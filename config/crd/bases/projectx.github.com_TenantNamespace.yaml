@@ -33,7 +33,6 @@ spec:
           metadata:
             type: object
           spec:
-            description: TenantNamespaceSpec defines the desired state of TenantNamespace
             properties:
               namespace:
                 description: Foo is an example field of TenantNamespace. Edit tenantnamespace_types.go
@@ -43,7 +42,6 @@ spec:
             - namespace
             type: object
           status:
-            description: TenantNamespaceStatus defines the observed state of TenantNamespace
             type: object
         type: object
     served: true

@@ -24,6 +24,8 @@ import (
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // TenantNamespaceSpec defines the desired state of TenantNamespace
+//+kubebuilder:resource:path=TenantNamespace,scope=Cluster
+
 type TenantNamespaceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -33,6 +35,8 @@ type TenantNamespaceSpec struct {
 }
 
 // TenantNamespaceStatus defines the observed state of TenantNamespace
+//+kubebuilder:resource:path=TenantNamespace,scope=Cluster
+
 type TenantNamespaceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -52,6 +56,7 @@ type TenantNamespace struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:path=TenantNamespace,scope=Cluster
 
 // TenantNamespaceList contains a list of TenantNamespace
 type TenantNamespaceList struct {
