@@ -82,8 +82,10 @@ func ConstructRole(rc projectxv1.Rbac, ns string) rbacv1.Role {
 	}
 	return rbacv1.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      rc.RoleName,
-			Namespace: ns,
+			Name:        rc.RoleName,
+			Namespace:   ns,
+			Annotations: tenantConfig.GetAnnotations(),
+			Labels:      tenantConfig.GetLabels(),
 		},
 		Rules: rules,
 	}
@@ -112,8 +114,10 @@ func (u *User) CreateIdentity(ctx context.Context, s projectxv1.Subject, r *Tena
 func (sa *ServiceAccount) CreateIdentity(ctx context.Context, s projectxv1.Subject, r *TenantBootstrapReconciler, ns string) error {
 	newSa := &core.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      s.Name,
-			Namespace: ns,
+			Name:        s.Name,
+			Namespace:   ns,
+			Annotations: tenantConfig.GetAnnotations(),
+			Labels:      tenantConfig.GetLabels(),
 		},
 	}
 	if err := controllerutil.SetControllerReference(&tenantConfig, newSa, r.Scheme); err != nil {
@@ -129,8 +133,10 @@ func (sa *ServiceAccount) CreateIdentity(ctx context.Context, s projectxv1.Subje
 func (r *TenantBootstrapReconciler) ConstructRoleBinding(rn string, ns string, subjects []rbacv1.Subject) rbacv1.RoleBinding {
 	return rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-rb", rn),
-			Namespace: ns,
+			Name:        fmt.Sprintf("%s-rb", rn),
+			Namespace:   ns,
+			Annotations: tenantConfig.GetAnnotations(),
+			Labels:      tenantConfig.GetLabels(),
 		},
 		Subjects: subjects,
 		RoleRef: rbacv1.RoleRef{
@@ -204,5 +210,8 @@ func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *TenantBootstrapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&projectxv1.TenantBootstrap{}).
+		Owns(&core.ServiceAccount{}).
+		Owns(&rbacv1.Role{}).
+		Owns(&rbacv1.RoleBinding{}).
 		Complete(r)
 }

@@ -81,6 +81,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.CreateNamespace(ctx, namespaceConfig.Spec); err != nil {
 		l.Error(err, "could not create namespace")
 		l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
+		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -89,5 +90,6 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 func (r *TenantNamespaceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&projectxv1.TenantNamespace{}).
+		Owns(&core.Namespace{}).
 		Complete(r)
 }
