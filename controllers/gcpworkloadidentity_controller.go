@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"bytes"
-	secretmanager "cloud.google.com/go/secretmanager/apiv1"
 	"context"
 	"fmt"
 	"github.com/googleapis/gax-go/v2"
@@ -29,6 +28,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	"strings"
+
 	//v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"net/http"
@@ -37,6 +38,7 @@ import (
 
 	iam "cloud.google.com/go/iam/credentials/apiv1"
 	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
+	iamclient "google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 	"google.golang.org/grpc"
@@ -259,7 +261,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
 			Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", adminSa.Annotations["iam.gke.io/gcp-service-account"]),
-			Scope: secretmanager.DefaultAuthScopes(),
+			Scope: iam.DefaultAuthScopes(),
 		}, gax.WithGRPCOptions(grpc.PerRPCCredentials(oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(idBindToken)})))
 		if err != nil {
 			l.Error(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
@@ -274,6 +276,48 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 			l.Error(err, "error retrieving token from tokensource")
 		}
 		l.Info("Got a token.", "token", t)
+
+		//uuid, _ := uuid.NewV4()
+		// Name must start with a letter and be 6-30 characters.
+		accountId := strings.Replace(config.Gcp.ServiceAccountName, "-", "", -1)
+		service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
+		//Check if SA already exists
+		checkSa, err := service.Projects.ServiceAccounts.Get(accountId).Do()
+		var account *iamclient.ServiceAccount
+		if err == nil {
+			l.Info("Service Account exists", "sa", checkSa.Email)
+		} else {
+
+			request := &iamclient.CreateServiceAccountRequest{
+				AccountId: accountId,
+				ServiceAccount: &iamclient.ServiceAccount{
+					DisplayName: config.Gcp.ServiceAccountName,
+				},
+			}
+			account, err := service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
+			if err != nil {
+				l.Error(err, "couldnt create sa")
+				return ctrl.Result{}, err
+			}
+			l.Info("Created Service Account", "Account", account.Name)
+		}
+
+		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{&iamclient.Binding{
+			Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
+			Role:    "roles/iam.workloadIdentityUser",
+		},
+		},
+		},
+		}
+
+		saService := iamclient.NewProjectsServiceAccountsService(service)
+		r, err := saService.SetIamPolicy(account.Email, wlIdPolicyRequest).Do()
+		if err != nil {
+			l.Error(err, "couldnt set binding")
+			return ctrl.Result{}, err
+		}
+		l.Info("Created wl id binding", "info", r.Bindings)
+
 	}
 	return ctrl.Result{}, nil
 }
@@ -282,5 +326,6 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 func (r *GcpWorkloadIdentityReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&projectxv1.GcpWorkloadIdentity{}).
+		Owns(&core.ServiceAccount{}).
 		Complete(r)
 }

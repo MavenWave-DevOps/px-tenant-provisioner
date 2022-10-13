@@ -5,12 +5,14 @@ go 1.18
 require (
 	cloud.google.com/go v0.81.0
 	github.com/go-logr/logr v1.2.0
+	github.com/gofrs/uuid v4.3.0+incompatible
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
 	google.golang.org/api v0.43.0
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368
+	google.golang.org/grpc v1.40.0
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
 	k8s.io/client-go v0.24.2
@@ -71,7 +73,6 @@ require (
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
