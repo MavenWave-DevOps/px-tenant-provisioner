@@ -1,4 +1,4 @@
-# tenant-bootstrap
+# tenant-provisioner
 // TODO(user): Add simple overview of use/purpose
 
 ## Description

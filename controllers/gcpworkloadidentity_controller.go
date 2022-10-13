@@ -219,7 +219,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 		adminSa := &v1core.ServiceAccount{}
 		err := r.Get(ctx, saKey, adminSa)
 		if err != nil {
-			l.Error(err, "line 220")
+			l.Error(err, "could not get service account")
 		}
 
 		idProvider := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
@@ -234,7 +234,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		clientset, err := kubernetes.NewForConfig(cfg)
 		if err != nil {
-			l.Error(err, "line 227")
+			l.Error(err, "could not create clientset")
 		}
 
 		satg := &k8sSATokenGenerator{
@@ -243,7 +243,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		resp, err := satg.Generate(ctx, audiences, saKey.Name, saKey.Namespace)
 		if err != nil {
-			l.Error(err, "line 236")
+			l.Error(err, "could not generate sa token")
 		}
 		idBindTokenGen := &gcpIDBindTokenGenerator{
 			targetURL: "https://securetoken.googleapis.com/v1/identitybindingtoken",
@@ -251,12 +251,12 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		idBindToken, err := idBindTokenGen.Generate(ctx, http.DefaultClient, resp.Status.Token, idPool, idProvider)
 		if err != nil {
-			l.Error(err, "line 244")
+			l.Error(err, "could not generate token")
 		}
 
 		iamc, err := newIAMClient(ctx)
 		if err != nil {
-			l.Error(err, "line 249")
+			l.Error(err, "could not create iam client")
 		}
 
 		gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
@@ -302,7 +302,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 			l.Info("Created Service Account", "Account", account.Name)
 		}
 
-		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{&iamclient.Binding{
+		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
 			Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
 			Role:    "roles/iam.workloadIdentityUser",
 		},
