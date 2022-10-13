@@ -3,17 +3,18 @@ kind: GcpWorkloadIdentity
 metadata:
   name: gcpworkloadidentity-sample
 spec:
-  kubernetes:
-    serviceAccountName: tenant-provisioner
-    namespace: default
-  gcp:
-    projectId: test
-    serviceAccountName: workload-tenant-provisioner
-    iamRoles:
-      - "roles/iam.securityAdmin"
-    auth:
-      serviceAccountName: admin
-      projectId: test
-      clusterLocation: us-west4
-      clusterName: fill-me-in
-      namespace: default
+  workloadIdentityConfigs:
+    - kubernetes:
+        serviceAccountName: tenant-consumer
+        namespace: example
+      gcp:
+        projectId: px-tony-project-rqt
+        serviceAccountName: tenant-consumer
+        iamRoles:
+          - "roles/iam.securityAdmin"
+        auth:
+          serviceAccountName: sa-workload-px-tnt-prov
+          projectId: px-tony-project-rqt
+          clusterLocation: us-central1
+          clusterName: primary-cluster
+          namespace: default

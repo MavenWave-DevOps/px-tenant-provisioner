@@ -43,6 +43,25 @@ spec:
                   properties:
                     gcp:
                       properties:
+                        auth:
+                          properties:
+                            clusterLocation:
+                              type: string
+                            clusterName:
+                              type: string
+                            namespace:
+                              type: string
+                            projectId:
+                              type: string
+                            serviceAccountName:
+                              type: string
+                          required:
+                          - clusterLocation
+                          - clusterName
+                          - namespace
+                          - projectId
+                          - serviceAccountName
+                          type: object
                         iamRoles:
                           items:
                             type: string
@@ -52,6 +71,7 @@ spec:
                         serviceAccountName:
                           type: string
                       required:
+                      - auth
                       - iamRoles
                       - projectId
                       - serviceAccountName

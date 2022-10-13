@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: example-admin
-  namespace: example
+  name: sa-workload-px-tnt-prov
+  namespace: default
   annotations:
-    iam.gke.io/gcp-service-account: px-tenant-provisioner@tony-sandbox-308422.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: sa-workload-px-tnt-prov@px-tony-project-rqt.iam.gserviceaccount.com

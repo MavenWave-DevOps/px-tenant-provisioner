@@ -25,9 +25,11 @@ import (
 	"golang.org/x/oauth2"
 	"google.golang.org/grpc/credentials/oauth"
 	"io"
+	v1core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/json"
+	//v1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -63,6 +65,7 @@ type k8sSATokenGenerator struct {
 }
 
 var workloadIdConfig projectxv1.GcpWorkloadIdentity
+var annotations map[string]string
 
 func newIAMClient(ctx context.Context) (*iam.IamCredentialsClient, error) {
 	iamOpts := []option.ClientOption{
@@ -145,7 +148,11 @@ func (sa *ServiceAccount) Exists(r *GcpWorkloadIdentityReconciler, ctx context.C
 }
 
 func (sa *ServiceAccount) CreateK8sWorkloadIdentity(r *GcpWorkloadIdentityReconciler, ctx context.Context, GcpConfig projectxv1.GcpWorkloadIdentityConfig) error {
-	annotations := tenantConfig.GetAnnotations()
+
+	annotations = tenantConfig.GetAnnotations()
+	if len(annotations) == 0 {
+		annotations = map[string]string{}
+	}
 	annotations["iam.gke.io/gcp-service-account"] = fmt.Sprintf("%s@%s", GcpConfig.ServiceAccountName, GcpConfig.ProjectId)
 	newSa := &core.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
@@ -207,6 +214,11 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 			Name:      config.Gcp.WlAuth.ServiceAccountName,
 			Namespace: config.Gcp.WlAuth.Namespace,
 		}
+		adminSa := &v1core.ServiceAccount{}
+		err := r.Get(ctx, saKey, adminSa)
+		if err != nil {
+			l.Error(err, "line 220")
+		}
 
 		idProvider := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
 			config.Gcp.WlAuth.ProjectId,
@@ -220,7 +232,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		clientset, err := kubernetes.NewForConfig(cfg)
 		if err != nil {
-			l.Error(err, "err")
+			l.Error(err, "line 227")
 		}
 
 		satg := &k8sSATokenGenerator{
@@ -229,7 +241,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		resp, err := satg.Generate(ctx, audiences, saKey.Name, saKey.Namespace)
 		if err != nil {
-			l.Error(err, "err")
+			l.Error(err, "line 236")
 		}
 		idBindTokenGen := &gcpIDBindTokenGenerator{
 			targetURL: "https://securetoken.googleapis.com/v1/identitybindingtoken",
@@ -237,27 +249,31 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 
 		idBindToken, err := idBindTokenGen.Generate(ctx, http.DefaultClient, resp.Status.Token, idPool, idProvider)
 		if err != nil {
-			l.Error(err, "err")
+			l.Error(err, "line 244")
 		}
 
 		iamc, err := newIAMClient(ctx)
 		if err != nil {
-			l.Error(err, "err")
+			l.Error(err, "line 249")
 		}
 
 		gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
-			Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", config.Gcp.ServiceAccountName),
+			Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", adminSa.Annotations["iam.gke.io/gcp-service-account"]),
 			Scope: secretmanager.DefaultAuthScopes(),
 		}, gax.WithGRPCOptions(grpc.PerRPCCredentials(oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(idBindToken)})))
 		if err != nil {
-			l.Error(err, "err")
+			l.Error(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
 		}
 		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{
 			AccessToken: gcpSAResp.GetAccessToken(),
 		})
 
 		//TODO - use the Authenticated iam client
-		l.Info("Got a token.", "token", tokenSource)
+		t, err := tokenSource.Token()
+		if err != nil {
+			l.Error(err, "error retrieving token from tokensource")
+		}
+		l.Info("Got a token.", "token", t)
 	}
 	return ctrl.Result{}, nil
 }
