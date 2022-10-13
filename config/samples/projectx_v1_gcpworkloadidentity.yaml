@@ -2,6 +2,7 @@ apiVersion: projectx.github.com/v1
 kind: GcpWorkloadIdentity
 metadata:
   name: gcpworkloadidentity-sample
+  namespace: example
 spec:
   workloadIdentityConfigs:
     - kubernetes:
