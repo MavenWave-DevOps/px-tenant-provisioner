@@ -6,7 +6,7 @@ metadata:
 spec:
   workloadIdentityConfigs:
     - kubernetes:
-        serviceAccountName: tenant-consumer
+        serviceAccountName: tenant-consumer-a
         namespace: example
       gcp:
         projectId: px-tony-project-rqt

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/googleapis/gax-go/v2"
 	"golang.org/x/oauth2"
+	iamclient "google.golang.org/api/iam/v1"
 	"google.golang.org/grpc/credentials/oauth"
 	"io"
 	v1core "k8s.io/api/core/v1"
@@ -38,7 +39,6 @@ import (
 
 	iam "cloud.google.com/go/iam/credentials/apiv1"
 	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
-	iamclient "google.golang.org/api/iam/v1"
 	"google.golang.org/api/option"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 	"google.golang.org/grpc"
@@ -64,6 +64,10 @@ type gcpIDBindTokenGenerator struct {
 
 type k8sSATokenGenerator struct {
 	corev1 clientcorev1.CoreV1Interface
+}
+
+type GcpServiceAccount struct {
+	Workload types.NamespacedName
 }
 
 var workloadIdConfig projectxv1.GcpWorkloadIdentity
@@ -173,152 +177,169 @@ func (sa *ServiceAccount) CreateK8sWorkloadIdentity(r *GcpWorkloadIdentityReconc
 	return nil
 }
 
+func (r  *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context,  saKey types.NamespacedName, config projectxv1.WorkloadIdentityConfig ) oauth2.TokenSource {
+	//Workload identity federation auth - based on external secrets https://github.com/external-secrets/external-secrets/blob/ddd1de2390a60e00511fd1a5df21826fa7a64d1a/pkg/provider/gcp/secretmanager/workload_identity.go#L97
+
+	adminSa := &v1core.ServiceAccount{}
+	err := r.Get(ctx, saKey, adminSa)
+	if err != nil {
+		l.Error(err, "could not get service account")
+	}
+
+	idProvider := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
+		config.Gcp.WlAuth.ProjectId,
+		config.Gcp.WlAuth.ClusterLocation,
+		config.Gcp.WlAuth.ClusterName)
+	idPool := fmt.Sprintf("%s.svc.id.goog", config.Gcp.WlAuth.ProjectId)
+	audiences := []string{idPool}
+	cfg, err := ctrlcfg.GetConfig()
+	if err != nil {
+		l.Error(err, "err")
+	}
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		l.Error(err, "could not create clientset")
+	}
+
+	satg := &k8sSATokenGenerator{
+		corev1: clientset.CoreV1(),
+	}
+
+	resp, err := satg.Generate(ctx, audiences, saKey.Name, saKey.Namespace)
+	if err != nil {
+		l.Error(err, "could not generate sa token")
+	}
+	idBindTokenGen := &gcpIDBindTokenGenerator{
+		targetURL: "https://securetoken.googleapis.com/v1/identitybindingtoken",
+	}
+
+	idBindToken, err := idBindTokenGen.Generate(ctx, http.DefaultClient, resp.Status.Token, idPool, idProvider)
+	if err != nil {
+		l.Error(err, "could not generate token")
+	}
+
+	iamc, err := newIAMClient(ctx)
+	if err != nil {
+		l.Error(err, "could not create iam client")
+	}
+
+	gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
+		Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", adminSa.Annotations["iam.gke.io/gcp-service-account"]),
+		Scope: iam.DefaultAuthScopes(),
+	}, gax.WithGRPCOptions(grpc.PerRPCCredentials(oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(idBindToken)})))
+	if err != nil {
+		l.Error(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
+	}
+	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: gcpSAResp.GetAccessToken(),
+	})
+
+	return tokenSource
+}
+
+func DeleteGcpWorkloadIdentities(ctx context.Context, config projectxv1.WorkloadIdentityConfig, tokenSource oauth2.TokenSource) error {
+	service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
+	//Check if SA already exists
+	_, err = service.Projects.ServiceAccounts.Delete(config.Gcp.ServiceAccountName).Do()
+	if err != nil {
+		l.Error(err, "couldnt create sa")
+		return err
+	}
+	l.Info("Deleted Service Account")
+	return nil
+}
+
+func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.WorkloadIdentityConfig, tokenSource oauth2.TokenSource) error {
+
+	accountId := strings.Replace(config.Gcp.ServiceAccountName, "-", "", -1)
+	service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
+	//Check if SA already exists
+	checkSa, err := service.Projects.ServiceAccounts.Get(accountId).Do()
+	var account *iamclient.ServiceAccount
+	if err == nil {
+		l.Info("Service Account exists", "sa", checkSa.Email)
+	} else {
+		l.Error(err, "error retrieving service account")
+		request := &iamclient.CreateServiceAccountRequest{
+			AccountId: accountId,
+			ServiceAccount: &iamclient.ServiceAccount{
+				DisplayName: config.Gcp.ServiceAccountName,
+			},
+		}
+		account, err := service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
+		if err != nil {
+			l.Error(err, "couldnt create sa")
+			return err
+		}
+		l.Info("Created Service Account", "Account", account.Name)
+	}
+
+	wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{
+		Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
+			Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
+			Role:    "roles/iam.workloadIdentityUser",
+		},
+		},
+		},
+	}
+
+	saService := iamclient.NewProjectsServiceAccountsService(service)
+	r, err := saService.SetIamPolicy(account.Email, wlIdPolicyRequest).Do()
+	if err != nil {
+		l.Error(err, "couldnt set binding")
+		return err
+	}
+	l.Info("Created wl id binding", "info", r.Bindings)
+
+	return nil
+}
+
 //+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the GcpWorkloadIdentity object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+
+	var deleteSa bool = false
+
 	//Populate our struct
 	if err := r.Get(ctx, req.NamespacedName, &workloadIdConfig); err != nil {
-		l.Error(err, "unable to load config")
-		return ctrl.Result{}, nil
+		deleteSa = true
+		l.Info("Crd is gone, deleting GCP serviceAccounts")
 	}
-
-	//Check for K8s Sa
 	for _, config := range workloadIdConfig.Spec.WorkloadIdentityConfigs {
-		sa := &ServiceAccount{
-			Name:      config.Kubernetes.ServiceAccountName,
-			Namespace: config.Kubernetes.Namespace,
+		saKey := GcpServiceAccount{
+			Workload: types.NamespacedName{
+				Name:      config.Gcp.WlAuth.ServiceAccountName,
+				Namespace: config.Gcp.WlAuth.Namespace,
+			},
 		}
-		if !sa.Exists(r, ctx) {
-			if err := sa.CreateK8sWorkloadIdentity(r, ctx, config.Gcp); err != nil {
-				l.Error(err, "unable to create Kubernetes service account")
-				return ctrl.Result{}, nil
-			}
-		}
-
-		//Workload identity config - based on external secrets https://github.com/external-secrets/external-secrets/blob/ddd1de2390a60e00511fd1a5df21826fa7a64d1a/pkg/provider/gcp/secretmanager/workload_identity.go#L97
-		//iamc, err := newIAMClient(ctx)
-		//if err != nil {
-		//	return nil, err
-		//}
-
-		saKey := types.NamespacedName{
-			Name:      config.Gcp.WlAuth.ServiceAccountName,
-			Namespace: config.Gcp.WlAuth.Namespace,
-		}
-		adminSa := &v1core.ServiceAccount{}
-		err := r.Get(ctx, saKey, adminSa)
-		if err != nil {
-			l.Error(err, "could not get service account")
-		}
-
-		idProvider := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
-			config.Gcp.WlAuth.ProjectId,
-			config.Gcp.WlAuth.ClusterLocation,
-			config.Gcp.WlAuth.ClusterName)
-		idPool := fmt.Sprintf("%s.svc.id.goog", config.Gcp.WlAuth.ProjectId)
-		audiences := []string{idPool}
-		cfg, err := ctrlcfg.GetConfig()
-		if err != nil {
-			l.Error(err, "err")
-		}
-		clientset, err := kubernetes.NewForConfig(cfg)
-		if err != nil {
-			l.Error(err, "could not create clientset")
-		}
-
-		satg := &k8sSATokenGenerator{
-			corev1: clientset.CoreV1(),
-		}
-
-		resp, err := satg.Generate(ctx, audiences, saKey.Name, saKey.Namespace)
-		if err != nil {
-			l.Error(err, "could not generate sa token")
-		}
-		idBindTokenGen := &gcpIDBindTokenGenerator{
-			targetURL: "https://securetoken.googleapis.com/v1/identitybindingtoken",
-		}
-
-		idBindToken, err := idBindTokenGen.Generate(ctx, http.DefaultClient, resp.Status.Token, idPool, idProvider)
-		if err != nil {
-			l.Error(err, "could not generate token")
-		}
-
-		iamc, err := newIAMClient(ctx)
-		if err != nil {
-			l.Error(err, "could not create iam client")
-		}
-
-		gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
-			Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", adminSa.Annotations["iam.gke.io/gcp-service-account"]),
-			Scope: iam.DefaultAuthScopes(),
-		}, gax.WithGRPCOptions(grpc.PerRPCCredentials(oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(idBindToken)})))
-		if err != nil {
-			l.Error(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
-		}
-		tokenSource := oauth2.StaticTokenSource(&oauth2.Token{
-			AccessToken: gcpSAResp.GetAccessToken(),
-		})
-
-		//TODO - use the Authenticated iam client
+		tokenSource := r.GcpAuth(ctx, saKey.Workload, config)
 		t, err := tokenSource.Token()
 		if err != nil {
 			l.Error(err, "error retrieving token from tokensource")
 		}
 		l.Info("Got a token.", "token", t)
-
-		//uuid, _ := uuid.NewV4()
-		// Name must start with a letter and be 6-30 characters.
-		accountId := strings.Replace(config.Gcp.ServiceAccountName, "-", "", -1)
-		service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
-		//Check if SA already exists
-		checkSa, err := service.Projects.ServiceAccounts.Get(accountId).Do()
-		var account *iamclient.ServiceAccount
-		if err == nil {
-			l.Info("Service Account exists", "sa", checkSa.Email)
+		if deleteSa {
+			if err := DeleteGcpWorkloadIdentities(ctx, config, tokenSource); err != nil {
+				l.Error(err, "error deleting sa")
+			}
 		} else {
-			l.Error(err, "error retrieving service account")
-			request := &iamclient.CreateServiceAccountRequest{
-				AccountId: accountId,
-				ServiceAccount: &iamclient.ServiceAccount{
-					DisplayName: config.Gcp.ServiceAccountName,
-				},
+			sa := &ServiceAccount{
+				Name:      config.Kubernetes.ServiceAccountName,
+				Namespace: config.Kubernetes.Namespace,
 			}
-			account, err := service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
-			if err != nil {
-				l.Error(err, "couldnt create sa")
-				return ctrl.Result{}, err
+			if !sa.Exists(r, ctx) {
+				if err := sa.CreateK8sWorkloadIdentity(r, ctx, config.Gcp); err != nil {
+					l.Error(err, "unable to create Kubernetes service account")
+					return ctrl.Result{}, nil
+				}
 			}
-			l.Info("Created Service Account", "Account", account.Name)
+			if err := CreateGcpWorkloadIdentities(ctx, config, tokenSource); err != nil {
+				l.Error(err, "error creating sa")
+			}
 		}
-
-		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{
-			Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
-				Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
-				Role:    "roles/iam.workloadIdentityUser",
-			},
-			},
-			},
-		}
-
-		saService := iamclient.NewProjectsServiceAccountsService(service)
-		r, err := saService.SetIamPolicy(account.Email, wlIdPolicyRequest).Do()
-		if err != nil {
-			l.Error(err, "couldnt set binding")
-			return ctrl.Result{}, err
-		}
-		l.Info("Created wl id binding", "info", r.Bindings)
-
 	}
 	return ctrl.Result{}, nil
 }
