@@ -36,18 +36,10 @@ type TenantNamespaceReconciler struct {
 
 var namespaceConfig projectxv1.TenantNamespace
 
-func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, spec projectxv1.TenantNamespaceSpec) error {
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        spec.Namespace,
-			Annotations: namespaceConfig.GetAnnotations(),
-			Labels:      namespaceConfig.GetLabels(),
-		},
-	}
+func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, ns *core.Namespace) error {
 	if err := ctrl.SetControllerReference(&namespaceConfig, ns, r.Scheme); err != nil {
 		return err
 	}
-	l.Info("Creating namespace", "ns config", ns)
 	if err := r.Create(ctx, ns); err != nil {
 		return err
 	} else {
@@ -55,35 +47,50 @@ func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, spec pr
 	}
 }
 
+func (r *TenantNamespaceReconciler) CheckNamespace(ctx context.Context, req ctrl.Request, ns *core.Namespace) (bool, *core.Namespace) {
+
+	if err := r.Get(ctx, req.NamespacedName, ns); err != nil {
+		return false, nil
+	} else {
+		return true, ns
+	}
+}
+
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the TenantNamespace object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	l = log.FromContext(ctx)
-
 	if err := r.Get(ctx, req.NamespacedName, &namespaceConfig); err != nil {
 		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
 	}
-	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
-	l.Info("Config: ", "conf - ", namespaceConfig)
 
-	if err := r.CreateNamespace(ctx, namespaceConfig.Spec); err != nil {
-		l.Error(err, "could not create namespace")
-		l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
+	ns := &core.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        namespaceConfig.Spec.Namespace,
+			Annotations: namespaceConfig.GetAnnotations(),
+			Labels:      namespaceConfig.GetLabels(),
+		},
+	}
+
+	//Check if ns already exists
+	if ok, _ := r.CheckNamespace(ctx, req, ns); !ok {
+		//Ns doesn't exist - create it now
+		if err := r.CreateNamespace(ctx, ns); err != nil {
+			l.Error(err, "could not create namespace")
+			l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
+			return ctrl.Result{}, nil
+		}
+		l.Info("Created namespace!")
+		return ctrl.Result{}, nil
+	} else {
+		//Namespace already exists
+		l.Info("namespace already exists")
 		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

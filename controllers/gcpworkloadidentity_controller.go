@@ -287,7 +287,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 		if err == nil {
 			l.Info("Service Account exists", "sa", checkSa.Email)
 		} else {
-
+			l.Error(err, "error retrieving service account")
 			request := &iamclient.CreateServiceAccountRequest{
 				AccountId: accountId,
 				ServiceAccount: &iamclient.ServiceAccount{
@@ -302,12 +302,13 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 			l.Info("Created Service Account", "Account", account.Name)
 		}
 
-		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
-			Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
-			Role:    "roles/iam.workloadIdentityUser",
-		},
-		},
-		},
+		wlIdPolicyRequest := &iamclient.SetIamPolicyRequest{
+			Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
+				Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
+				Role:    "roles/iam.workloadIdentityUser",
+			},
+			},
+			},
 		}
 
 		saService := iamclient.NewProjectsServiceAccountsService(service)
