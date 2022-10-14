@@ -177,7 +177,7 @@ func (sa *ServiceAccount) CreateK8sWorkloadIdentity(r *GcpWorkloadIdentityReconc
 	return nil
 }
 
-func (r  *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context,  saKey types.NamespacedName, config projectxv1.WorkloadIdentityConfig ) oauth2.TokenSource {
+func (r *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context, saKey types.NamespacedName, config projectxv1.WorkloadIdentityConfig) oauth2.TokenSource {
 	//Workload identity federation auth - based on external secrets https://github.com/external-secrets/external-secrets/blob/ddd1de2390a60e00511fd1a5df21826fa7a64d1a/pkg/provider/gcp/secretmanager/workload_identity.go#L97
 
 	adminSa := &v1core.ServiceAccount{}
@@ -278,8 +278,7 @@ func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 		Policy: &iamclient.Policy{Bindings: []*iamclient.Binding{{
 			Members: []string{fmt.Sprintf("serviceAccount:%s.svc.id.goog[%s/%s]", config.Gcp.ProjectId, config.Kubernetes.Namespace, config.Kubernetes.ServiceAccountName)},
 			Role:    "roles/iam.workloadIdentityUser",
-		},
-		},
+		}},
 		},
 	}
 
