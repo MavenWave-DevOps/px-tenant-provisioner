@@ -6,11 +6,11 @@ metadata:
 spec:
   workloadIdentityConfigs:
     - kubernetes:
-        serviceAccountName: tenant-consumer-a
+        serviceAccountName: tenant-consumer-d
         namespace: example
       gcp:
         projectId: px-tony-project-rqt
-        serviceAccountName: tenant-consumer
+        serviceAccountName: tenant-consumer-d
         iamRoles:
           - "roles/iam.securityAdmin"
         auth:
