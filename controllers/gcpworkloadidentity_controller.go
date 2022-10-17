@@ -50,6 +50,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrlcfg "sigs.k8s.io/controller-runtime/pkg/client/config"
+    "github.com/tony-mw/tenant-bootstrap/common/utils"
 	//iamauthed "cloud.google.com/go/iam"
 )
 
@@ -182,9 +183,7 @@ func (r *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context, saKey types
 
 	adminSa := &v1core.ServiceAccount{}
 	err := r.Get(ctx, saKey, adminSa)
-	if err != nil {
-		l.Error(err, "could not get service account")
-	}
+	utils.CheckErr(err, "could not get service account")
 
 	idProvider := fmt.Sprintf("https://container.googleapis.com/v1/projects/%s/locations/%s/clusters/%s",
 		config.Gcp.WlAuth.ProjectId,
@@ -193,43 +192,32 @@ func (r *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context, saKey types
 	idPool := fmt.Sprintf("%s.svc.id.goog", config.Gcp.WlAuth.ProjectId)
 	audiences := []string{idPool}
 	cfg, err := ctrlcfg.GetConfig()
-	if err != nil {
-		l.Error(err, "err")
-	}
+	utils.CheckErr(err, "couldnt get config")
 	clientset, err := kubernetes.NewForConfig(cfg)
-	if err != nil {
-		l.Error(err, "could not create clientset")
-	}
+	utils.CheckErr(err, "couldnt create clientset")
 
 	satg := &k8sSATokenGenerator{
 		corev1: clientset.CoreV1(),
 	}
 
 	resp, err := satg.Generate(ctx, audiences, saKey.Name, saKey.Namespace)
-	if err != nil {
-		l.Error(err, "could not generate sa token")
-	}
+	utils.CheckErr(err, "couldnt generate a token")
 	idBindTokenGen := &gcpIDBindTokenGenerator{
 		targetURL: "https://securetoken.googleapis.com/v1/identitybindingtoken",
 	}
 
 	idBindToken, err := idBindTokenGen.Generate(ctx, http.DefaultClient, resp.Status.Token, idPool, idProvider)
-	if err != nil {
-		l.Error(err, "could not generate token")
-	}
+	utils.CheckErr(err, "couldnt get a bind token")
 
 	iamc, err := newIAMClient(ctx)
-	if err != nil {
-		l.Error(err, "could not create iam client")
-	}
+	utils.CheckErr(err, "could not create iam client")
 
 	gcpSAResp, err := iamc.GenerateAccessToken(ctx, &credentialspb.GenerateAccessTokenRequest{
 		Name:  fmt.Sprintf("projects/-/serviceAccounts/%s", adminSa.Annotations["iam.gke.io/gcp-service-account"]),
 		Scope: iam.DefaultAuthScopes(),
 	}, gax.WithGRPCOptions(grpc.PerRPCCredentials(oauth.TokenSource{TokenSource: oauth2.StaticTokenSource(idBindToken)})))
-	if err != nil {
-		l.Error(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
-	}
+	utils.CheckErr(err, fmt.Sprintf("Identity is: %s", adminSa.Annotations["iam.gke.io/gcp-service-account"]))
+
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{
 		AccessToken: gcpSAResp.GetAccessToken(),
 	})
@@ -274,12 +262,7 @@ func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 		},
 	}
 	account, err = service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
-	if err != nil {
-		l.Error(err, "couldnt create sa")
-		//return err
-	}
-	l.Info("Created Service Account", "Account", account.Name)
-	l.Info("Trying to apply policy")
+	utils.CheckErr(err, "couldnt create sa")
 	var Bindings []*iamclient.Binding
 
 	b := &iamclient.Binding{
@@ -333,9 +316,7 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 		}
 		tokenSource := r.GcpAuth(ctx, saKey.Workload, config)
 		t, err := tokenSource.Token()
-		if err != nil {
-			l.Error(err, "error retrieving token from tokensource")
-		}
+		utils.CheckErr(err, "Error getting tokensource")
 		l.Info("Got a token.", "token", t)
 		if deleteSa {
 			if err := DeleteGcpWorkloadIdentities(ctx, config, tokenSource); err != nil {

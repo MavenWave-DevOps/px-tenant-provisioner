@@ -5,7 +5,6 @@ go 1.18
 require (
 	cloud.google.com/go v0.81.0
 	github.com/go-logr/logr v1.2.0
-	github.com/gofrs/uuid v4.3.0+incompatible
 	github.com/googleapis/gax-go/v2 v2.0.5
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.18.1
