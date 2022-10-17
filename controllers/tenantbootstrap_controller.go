@@ -202,7 +202,7 @@ func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
-
+	//Implement a check before create
 	if err := r.CreateRbac(ctx, tenantConfig.Spec); err != nil {
 		l.Error(err, "could not create rbac")
 	}

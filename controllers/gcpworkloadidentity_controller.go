@@ -143,7 +143,7 @@ func (g *k8sSATokenGenerator) Generate(ctx context.Context, audiences []string, 
 		)
 }
 
-func (sa *ServiceAccount) Exists(r *GcpWorkloadIdentityReconciler, ctx context.Context) bool {
+func (r *GcpWorkloadIdentityReconciler) Exists(sa ServiceAccount, ctx context.Context) bool {
 	saObject := &core.ServiceAccount{}
 
 	if err := r.Get(ctx, client.ObjectKey{Name: sa.Name, Namespace: sa.Namespace}, saObject); err != nil {
@@ -237,7 +237,7 @@ func (r *GcpWorkloadIdentityReconciler) GcpAuth(ctx context.Context, saKey types
 	return tokenSource
 }
 
-// projects/px-tony-project-rqt/serviceAccounts/tenantconsumerc@px-tony-project-rqt.iam.gserviceaccount.com
+// DeleteGcpWorkloadIdentities projects/px-tony-project-rqt/serviceAccounts/tenantconsumerc@px-tony-project-rqt.iam.gserviceaccount.com
 func DeleteGcpWorkloadIdentities(ctx context.Context, config projectxv1.WorkloadIdentityConfig, tokenSource oauth2.TokenSource) error {
 	accountId := strings.Replace(config.Gcp.ServiceAccountName, "-", "", -1)
 	service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
@@ -253,29 +253,32 @@ func DeleteGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 
 func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.WorkloadIdentityConfig, tokenSource oauth2.TokenSource) error {
 
+	var account *iamclient.ServiceAccount
+
+	l.Info("Creating GCP SA")
 	accountId := strings.Replace(config.Gcp.ServiceAccountName, "-", "", -1)
 	service, err := iamclient.NewService(ctx, option.WithTokenSource(tokenSource))
+	l.Info("Created client OK")
 	//Check if SA already exists
 	checkSa, err := service.Projects.ServiceAccounts.Get(fmt.Sprintf("projects/%s/serviceAccounts/%s@%s.iam.gserviceaccount.com", config.Gcp.ProjectId, accountId, config.Gcp.ProjectId)).Do()
 	//var account *iamclient.ServiceAccount
 	if err == nil {
-		l.Info("Service Account exists", "sa", checkSa.Email)
-	} else {
-		l.Error(err, fmt.Sprintf("error retrieving service account: %s", checkSa.Name))
-		request := &iamclient.CreateServiceAccountRequest{
-			AccountId: accountId,
-			ServiceAccount: &iamclient.ServiceAccount{
-				DisplayName: config.Gcp.ServiceAccountName,
-			},
-		}
-		account, err := service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
-		if err != nil {
-			l.Error(err, "couldnt create sa")
-			//return err
-		}
-		l.Info("Created Service Account", "Account", account.Name)
+		l.Info("Service Account exists", "sa:", checkSa.Name)
+		return nil
 	}
-
+	l.Error(err, fmt.Sprintf("error retrieving service account"))
+	request := &iamclient.CreateServiceAccountRequest{
+		AccountId: accountId,
+		ServiceAccount: &iamclient.ServiceAccount{
+			DisplayName: config.Gcp.ServiceAccountName,
+		},
+	}
+	account, err = service.Projects.ServiceAccounts.Create(fmt.Sprintf("projects/%s", config.Gcp.ProjectId), request).Do()
+	if err != nil {
+		l.Error(err, "couldnt create sa")
+		//return err
+	}
+	l.Info("Created Service Account", "Account", account.Name)
 	l.Info("Trying to apply policy")
 	var Bindings []*iamclient.Binding
 
@@ -295,7 +298,7 @@ func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 	l.Info("Creating additional service")
 	saService := iamclient.NewProjectsServiceAccountsService(service)
 	l.Info("Setting policy")
-	r, err := saService.SetIamPolicy("serviceAccount", wlIdPolicyRequest).Do()
+	r, err := saService.SetIamPolicy(account.Name, wlIdPolicyRequest).Do()
 	l.Info("policy was set")
 	if err != nil {
 		l.Error(err, "couldnt set binding")
@@ -339,16 +342,19 @@ func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.
 				l.Error(err, "error deleting sa")
 			}
 		} else {
-			sa := &ServiceAccount{
+			l.Info("Creating SA")
+			sa := ServiceAccount{
 				Name:      config.Kubernetes.ServiceAccountName,
 				Namespace: config.Kubernetes.Namespace,
 			}
-			if !sa.Exists(r, ctx) {
+			if !r.Exists(sa, ctx) {
+				l.Info("Entering create k8s SA function")
 				if err := sa.CreateK8sWorkloadIdentity(r, ctx, config.Gcp); err != nil {
 					l.Error(err, "unable to create Kubernetes service account")
 					return ctrl.Result{}, nil
 				}
 			}
+			l.Info("Entering create GCP SA function")
 			if err := CreateGcpWorkloadIdentities(ctx, config, tokenSource); err != nil {
 				l.Error(err, "error creating sa")
 			}
