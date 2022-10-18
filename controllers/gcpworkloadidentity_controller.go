@@ -23,7 +23,7 @@ import (
 
 	iam "cloud.google.com/go/iam/credentials/apiv1"
 	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
-	"github.com/tony-mw/tenant-bootstrap/common/utils"
+	"github.com/MavenWave-DevOps/px-tenant-provisioner/common/utils"
 	"google.golang.org/api/option"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"
 	"google.golang.org/grpc"
