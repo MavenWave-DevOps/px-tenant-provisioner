@@ -2,14 +2,13 @@ package controllers
 
 import (
 	"context"
+	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // TenantNamespaceReconciler reconciles a TenantNamespace object
@@ -51,30 +50,32 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
 	}
-
-	ns := &core.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        namespaceConfig.Spec.Namespace,
-			Annotations: namespaceConfig.GetAnnotations(),
-			Labels:      namespaceConfig.GetLabels(),
-		},
-	}
-
-	//Check if ns already exists
-	if ok, _ := r.CheckNamespace(ctx, req, ns); !ok {
-		//Ns doesn't exist - create it now
-		if err := r.CreateNamespace(ctx, ns); err != nil {
-			l.Error(err, "could not create namespace")
-			l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
-			return ctrl.Result{}, nil
+	for _, namespace := range namespaceConfig.Spec.Namespaces {
+		ns := &core.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        namespace,
+				Annotations: namespaceConfig.GetAnnotations(),
+				Labels:      namespaceConfig.GetLabels(),
+			},
 		}
-		l.Info("Created namespace!")
-		return ctrl.Result{}, nil
-	} else {
-		//Namespace already exists
-		l.Info("namespace already exists")
-		return ctrl.Result{}, nil
+
+		//Check if ns already exists
+		if ok, _ := r.CheckNamespace(ctx, req, ns); !ok {
+			//Ns doesn't exist - create it now
+			if err := r.CreateNamespace(ctx, ns); err != nil {
+				l.Error(err, "could not create namespace")
+				l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
+				return ctrl.Result{}, nil
+			}
+			l.Info("Created namespace!")
+			continue
+		} else {
+			//Namespace already exists
+			l.Info("namespace already exists")
+			continue
+		}
 	}
+	return ctrl.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

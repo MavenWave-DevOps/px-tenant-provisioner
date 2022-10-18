@@ -22,7 +22,7 @@ import (
 	"time"
 
 	iam "cloud.google.com/go/iam/credentials/apiv1"
-	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
+	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	"github.com/MavenWave-DevOps/px-tenant-provisioner/common/utils"
 	"google.golang.org/api/option"
 	credentialspb "google.golang.org/genproto/googleapis/iam/credentials/v1"

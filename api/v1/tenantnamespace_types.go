@@ -31,7 +31,7 @@ type TenantNamespaceSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// Foo is an example field of TenantNamespace. Edit tenantnamespace_types.go to remove/update
-	Namespace string `json:"namespace"`
+	Namespaces []string `json:"namespaces"`
 }
 
 // TenantNamespaceStatus defines the observed state of TenantNamespace

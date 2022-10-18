@@ -3,4 +3,7 @@ kind: TenantNamespace
 metadata:
   name: tenantnamespace-sample
 spec:
-  namespace: example
+  namespaces:
+    - example-a
+    - example-b
+    - example-c

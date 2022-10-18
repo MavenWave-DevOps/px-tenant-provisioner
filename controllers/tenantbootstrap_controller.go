@@ -3,8 +3,8 @@ package controllers
 import (
 	"context"
 	"fmt"
+	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	"github.com/go-logr/logr"
-	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
 	core "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
