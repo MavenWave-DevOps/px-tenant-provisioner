@@ -1,19 +1,3 @@
-/*
-Copyright 2022.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package controllers
 
 import (
@@ -124,14 +108,18 @@ func (sa *ServiceAccount) CreateIdentity(ctx context.Context, s projectxv1.Subje
 			Labels:      tenantConfig.GetLabels(),
 		},
 	}
-	if err := controllerutil.SetControllerReference(&tenantConfig, newSa, r.Scheme); err != nil {
-		l.Error(err, "couldnt set namespace ref")
+	if err := r.Get(ctx, client.ObjectKey{Name: s.Name, Namespace: ns}, newSa); err == nil {
+		l.Info("Service Account already exists", "name", s.Name)
+		return nil
+	} else {
+		if err := controllerutil.SetControllerReference(&tenantConfig, newSa, r.Scheme); err != nil {
+			l.Error(err, "couldnt set namespace ref")
+		}
+		if err := r.Create(ctx, newSa); err != nil {
+			return err
+		}
+		return nil
 	}
-
-	if err := r.Create(ctx, newSa); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (r *TenantBootstrapReconciler) ConstructRoleBinding(rn string, ns string, subjects []rbacv1.Subject) rbacv1.RoleBinding {
@@ -150,15 +138,21 @@ func (r *TenantBootstrapReconciler) ConstructRoleBinding(rn string, ns string, s
 	}
 }
 
-func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, spec projectxv1.TenantBootstrapSpec) error {
+func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, req ctrl.Request, spec projectxv1.TenantBootstrapSpec) error {
 	ns := tenantConfig.Namespace
 	for _, roleConfig := range spec.Rbac {
+		//Create roles
+
 		role := ConstructRole(roleConfig, ns)
-		if err := controllerutil.SetControllerReference(&tenantConfig, &role, r.Scheme); err != nil {
-			l.Error(err, "couldnt set namespace ref")
-		}
-		if err := r.Create(ctx, &role); err != nil {
-			return err
+		if err := r.Get(ctx, req.NamespacedName, &role); err == nil {
+			l.Info("role already exists", "role", role.Name)
+		} else {
+			if err = controllerutil.SetControllerReference(&tenantConfig, &role, r.Scheme); err != nil {
+				l.Error(err, "couldnt set namespace ref")
+			}
+			if err = r.Create(ctx, &role); err != nil {
+				return err
+			}
 		}
 		//Create roleBindings per role
 		var subjects []rbacv1.Subject
@@ -180,21 +174,27 @@ func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, spec project
 			}
 			subjects = append(subjects, subKind.ConstructSubject(roleConfig.Subjects[j], ns))
 			if roleConfig.Subjects[j].Create {
+				//Check builtin to create identity method
 				if err := subKind.CreateIdentity(ctx, roleConfig.Subjects[j], r, ns); err != nil {
 					return err
 				}
 			}
 		}
 		rb := r.ConstructRoleBinding(roleConfig.RoleName, ns, subjects)
-		if err := controllerutil.SetControllerReference(&tenantConfig, &rb, r.Scheme); err != nil {
-			l.Error(err, "couldnt set namespace ref")
-		}
-		if err := r.Create(ctx, &rb); err != nil {
-			l.Error(err, "couldnt create role binding")
+		if err := r.Get(ctx, req.NamespacedName, &rb); err == nil {
+			l.Info("rolebinding already exists", "rolebinding", rb.Name)
+		} else {
+			if err := controllerutil.SetControllerReference(&tenantConfig, &rb, r.Scheme); err == nil {
+				l.Error(err, "couldnt set namespace ref")
+			}
+			if err := r.Create(ctx, &rb); err != nil {
+				l.Error(err, "couldnt create role binding")
+			}
 		}
 	}
 	return nil
 }
+
 func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
 	if err := r.Get(ctx, req.NamespacedName, &tenantConfig); err != nil {
@@ -203,7 +203,8 @@ func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
 	//Implement a check before create
-	if err := r.CreateRbac(ctx, tenantConfig.Spec); err != nil {
+
+	if err := r.CreateRbac(ctx, req, tenantConfig.Spec); err != nil {
 		l.Error(err, "could not create rbac")
 	}
 
