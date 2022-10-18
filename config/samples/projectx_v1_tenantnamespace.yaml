@@ -4,6 +4,6 @@ metadata:
   name: tenantnamespace-sample
 spec:
   namespaces:
-    - example-a
-    - example-b
-    - example-c
+  - examplea
+  - exampleb
+  - examplec

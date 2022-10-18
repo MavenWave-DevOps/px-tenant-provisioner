@@ -34,12 +34,14 @@ spec:
             type: object
           spec:
             properties:
-              namespace:
+              namespaces:
                 description: Foo is an example field of TenantNamespace. Edit tenantnamespace_types.go
                   to remove/update
-                type: string
+                items:
+                  type: string
+                type: array
             required:
-            - namespace
+            - namespaces
             type: object
           status:
             type: object

@@ -51,6 +51,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 	for _, namespace := range namespaceConfig.Spec.Namespaces {
+		l.Info("Namespace name", "ns", namespace)
 		ns := &core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        namespace,
