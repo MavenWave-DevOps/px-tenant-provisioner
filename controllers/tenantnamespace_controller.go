@@ -51,7 +51,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 	for _, namespace := range namespaceConfig.Spec.Namespaces {
-		l.Info("Namespace name", "ns", namespace)
+		l.Info("Namespace name", "ns", namespaceConfig.Spec.Namespaces)
 		ns := &core.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        namespace,
@@ -65,7 +65,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			//Ns doesn't exist - create it now
 			if err := r.CreateNamespace(ctx, ns); err != nil {
 				l.Error(err, "could not create namespace")
-				l.Info("attempted", "namespace", namespace)
+				l.Info("attempted", "namespaceConfig", namespaceConfig)
 				return ctrl.Result{}, nil
 			}
 			l.Info("Created namespace!")
