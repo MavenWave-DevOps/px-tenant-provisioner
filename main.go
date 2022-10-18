@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	projectxv1 "github.com/tony-mw/tenant-bootstrap/api/v1"
-	"github.com/tony-mw/tenant-bootstrap/controllers"
+	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
+	"github.com/MavenWave-DevOps/px-tenant-provisioner/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
