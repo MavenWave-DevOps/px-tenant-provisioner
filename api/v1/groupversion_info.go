@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1 contains API Schema definitions for the projectx v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=projectx.github.com
+// +kubebuilder:object:generate=true
+// +groupName=projectx.github.com
 package v1
 
 import (
