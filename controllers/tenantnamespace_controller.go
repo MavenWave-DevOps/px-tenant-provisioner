@@ -64,7 +64,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			//Ns doesn't exist - create it now
 			if err := r.CreateNamespace(ctx, ns); err != nil {
 				l.Error(err, "could not create namespace")
-				l.Info("attempted", "namespace", namespaceConfig.Spec.Namespace)
+				l.Info("attempted", "namespace", namespace)
 				return ctrl.Result{}, nil
 			}
 			l.Info("Created namespace!")
