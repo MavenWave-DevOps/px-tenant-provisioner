@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	"github.com/go-logr/logr"
@@ -201,8 +202,14 @@ func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		l.Error(err, "Unable to load config")
 		return ctrl.Result{}, nil
 	}
-	l.Info("namespace name: ", "namespace name", req.NamespacedName.Name, "namespace info", req.NamespacedName.Namespace)
-	//Implement a check before create
+
+	//Implement a namespace check before create
+	ns := TenantNamespace{NamespaceSpec: namespaceConfig.Spec}
+	if ns.CheckNs(ctx, req, r) != true {
+		err := errors.New("namespaces were not created")
+		l.Error(err, "try creating namespaces again")
+		return ctrl.Result{}, err
+	}
 
 	if err := r.CreateRbac(ctx, req, tenantConfig.Spec); err != nil {
 		l.Error(err, "could not create rbac")

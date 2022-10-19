@@ -2,12 +2,12 @@ apiVersion: projectx.github.com/v1
 kind: GcpWorkloadIdentity
 metadata:
   name: gcpworkloadidentity-sample
-  namespace: example
+  namespace: examplea
 spec:
   workloadIdentityConfigs:
     - kubernetes:
         serviceAccountName: tenant-consumer-d
-        namespace: example
+        namespace: examplea
       gcp:
         projectId: px-tony-project-rqt
         serviceAccountName: tenant-consumer-d

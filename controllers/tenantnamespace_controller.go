@@ -4,7 +4,6 @@ import (
 	"context"
 	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	core "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,15 +29,6 @@ func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, ns *cor
 	}
 }
 
-func (r *TenantNamespaceReconciler) CheckNamespace(ctx context.Context, req ctrl.Request, ns *core.Namespace) (bool, *core.Namespace) {
-
-	if err := r.Get(ctx, req.NamespacedName, ns); err != nil {
-		return false, nil
-	} else {
-		return true, ns
-	}
-}
-
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/finalizers,verbs=update
@@ -52,14 +42,7 @@ func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 	for _, namespace := range namespaceConfig.Spec.Namespaces {
 		l.Info("Namespace name", "ns", namespaceConfig.Spec.Namespaces)
-		ns := &core.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        namespace,
-				Annotations: namespaceConfig.GetAnnotations(),
-				Labels:      namespaceConfig.GetLabels(),
-			},
-		}
-
+		ns := ConstructNamespace(namespace)
 		//Check if ns already exists
 		if ok, _ := r.CheckNamespace(ctx, req, ns); !ok {
 			//Ns doesn't exist - create it now

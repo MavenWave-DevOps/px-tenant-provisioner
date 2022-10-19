@@ -2,7 +2,7 @@ apiVersion: projectx.github.com/v1
 kind: TenantBootstrap
 metadata:
   name: tenantbootstrap-sample
-  namespace: example
+  namespace: examplea
 spec:
   rbac:
     - roleName: viewer
