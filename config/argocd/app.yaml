@@ -1,18 +1,18 @@
----
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: tenant-provisioning
-  labels:
-    deployment: kustomize
-    name: tenant-provisioning
-    tier: cluster
-  annotations:
-    argocd.argoproj.io/sync-wave: "-20"
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/MavenWave-DevOps/tenant-provisioner.git
-    path: config/samples
-  destination:
-    server: https://kubernetes.default.svc
+#---
+#apiVersion: argoproj.io/v1alpha1
+#kind: Application
+#metadata:
+#  name: tenant-provisioning
+#  labels:
+#    deployment: kustomize
+#    name: tenant-provisioning
+#    tier: cluster
+#  annotations:
+#    argocd.argoproj.io/sync-wave: "-20"
+#spec:
+#  project: default
+#  source:
+#    repoURL: https://github.com/MavenWave-DevOps/tenant-provisioner.git
+#    path: config/samples
+#  destination:
+#    server: https://kubernetes.default.svc
