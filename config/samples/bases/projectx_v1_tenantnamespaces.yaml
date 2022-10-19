@@ -2,8 +2,10 @@ apiVersion: projectx.github.com/v1
 kind: TenantNamespace
 metadata:
   name: tenantnamespace-sample
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 spec:
   namespaces:
-  - examplea
-  - exampleb
-  - examplec
+    - examplea
+    - exampleb
+    - examplec

@@ -1,0 +1,3 @@
+resources:
+  - projectx_v1_tenantbootstrap.yaml
+  - projectx_v1_gcpworkloadidentity.yaml

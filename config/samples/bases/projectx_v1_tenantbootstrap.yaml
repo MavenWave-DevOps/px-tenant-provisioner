@@ -3,6 +3,8 @@ kind: TenantBootstrap
 metadata:
   name: tenantbootstrap-sample
   namespace: examplea
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
 spec:
   rbac:
     - roleName: viewer
