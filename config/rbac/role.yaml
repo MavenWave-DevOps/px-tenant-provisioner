@@ -6,7 +6,7 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - projectx.github.com
+  - '*'
   resources:
   - '*'
   verbs:
@@ -14,29 +14,9 @@ rules:
 - apiGroups:
   - projectx.github.com
   resources:
-  - gcpworkloadidentities
+  - '*'
   verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - projectx.github.com
-  resources:
-  - gcpworkloadidentities/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - projectx.github.com
-  resources:
-  - gcpworkloadidentities/status
-  verbs:
-  - get
-  - patch
-  - update
+  - '*'
 - apiGroups:
   - projectx.github.com
   resources:
@@ -59,32 +39,6 @@ rules:
   - projectx.github.com
   resources:
   - tenantbootstraps/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - projectx.github.com
-  resources:
-  - tenantnamespaces
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - projectx.github.com
-  resources:
-  - tenantnamespaces/finalizers
-  verbs:
-  - update
-- apiGroups:
-  - projectx.github.com
-  resources:
-  - tenantnamespaces/status
   verbs:
   - get
   - patch

@@ -29,9 +29,7 @@ func (r *TenantNamespaceReconciler) CreateNamespace(ctx context.Context, ns *cor
 	}
 }
 
-//+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=projectx.github.com,resources=tenantnamespaces/finalizers,verbs=update
+//+kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *TenantNamespaceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

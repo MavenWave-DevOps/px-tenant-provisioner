@@ -276,9 +276,7 @@ func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 	return nil
 }
 
-//+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=projectx.github.com,resources=gcpworkloadidentities/finalizers,verbs=update
+//+kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *GcpWorkloadIdentityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

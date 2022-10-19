@@ -195,6 +195,7 @@ func (r *TenantBootstrapReconciler) CreateRbac(ctx context.Context, req ctrl.Req
 	}
 	return nil
 }
+//+kubebuilder:rbac:groups=*,resources=*,verbs=*
 
 func (r *TenantBootstrapReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
