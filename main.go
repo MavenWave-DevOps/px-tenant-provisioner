@@ -33,6 +33,7 @@ import (
 
 	projectxv1 "github.com/MavenWave-DevOps/px-tenant-provisioner/api/v1"
 	"github.com/MavenWave-DevOps/px-tenant-provisioner/controllers"
+	_ "github.com/MavenWave-DevOps/px-tenant-provisioner/utils"
 	//+kubebuilder:scaffold:imports
 )
 
