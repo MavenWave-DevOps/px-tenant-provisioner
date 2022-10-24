@@ -4,4 +4,4 @@ metadata:
   name: sa-workload-px-tnt-prov
   namespace: default
   annotations:
-    iam.gke.io/gcp-service-account: sa-workload-px-tnt-prov@px-tony-project-rqt.iam.gserviceaccount.com
+    iam.gke.io/gcp-service-account: sa-workload-px-tnt-prov@tony-sandbox-308422.iam.gserviceaccount.com
