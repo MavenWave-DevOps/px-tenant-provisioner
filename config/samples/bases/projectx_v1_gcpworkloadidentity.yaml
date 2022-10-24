@@ -2,20 +2,20 @@ apiVersion: projectx.github.com/v1
 kind: GcpWorkloadIdentity
 metadata:
   name: gcpworkloadidentity-sample
-  namespace: examplea
+  namespace: product1
 spec:
   workloadIdentityConfigs:
     - kubernetes:
-        serviceAccountName: tenant-consumer-d
+        serviceAccountName: product1-consumer
         namespace: examplea
       gcp:
-        projectId: px-tony-project-rqt
-        serviceAccountName: tenant-consumer-d
+        projectId: tony-sandbox-308422
+        serviceAccountName: product1-consumer
         iamRoles:
           - "roles/iam.securityAdmin"
         auth:
           serviceAccountName: sa-workload-px-tnt-prov
-          projectId: px-tony-project-rqt
+          projectId: tony-sandbox-308422
           clusterLocation: us-central1
-          clusterName: primary-cluster
+          clusterName: tidalwave-test
           namespace: default

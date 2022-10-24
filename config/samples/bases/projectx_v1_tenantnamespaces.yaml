@@ -1,11 +1,11 @@
 apiVersion: projectx.github.com/v1
 kind: TenantNamespace
 metadata:
-  name: tenantnamespace-sample
+  name: productNamespaces
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
 spec:
   namespaces:
-    - examplea
-    - exampleb
-    - examplec
+    - product1
+    - product2
+    - product3

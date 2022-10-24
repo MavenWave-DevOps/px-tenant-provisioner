@@ -1,8 +1,8 @@
 apiVersion: projectx.github.com/v1
 kind: TenantBootstrap
 metadata:
-  name: tenantbootstrap-sample
-  namespace: examplea
+  name: productBootstraps
+  namespace: product1
   annotations:
     argocd.argoproj.io/sync-wave: "-10"
 spec:
