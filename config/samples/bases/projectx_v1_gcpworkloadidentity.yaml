@@ -9,7 +9,7 @@ spec:
   workloadIdentityConfigs:
     - kubernetes:
         serviceAccountName: product1-consumer
-        namespace: examplea
+        namespace: product1
       gcp:
         projectId: tony-sandbox-308422
         serviceAccountName: product1-consumer
