@@ -1,9 +1,9 @@
 apiVersion: projectx.github.com/v1
 kind: TenantNamespace
 metadata:
-  name: productNamespaces
+  name: product-namespaces
   annotations:
-    argocd.argoproj.io/sync-wave: "-10"
+    argocd.argoproj.io/sync-wave: "-20"
 spec:
   namespaces:
     - product1
