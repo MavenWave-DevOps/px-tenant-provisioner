@@ -12,7 +12,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/MavenWave-DevOps/tenant-provisioner.git
+    repoURL: https://github.com/MavenWave-DevOps/px-tenant-provisioner.git
     path: config/samples
   destination:
     server: https://kubernetes.default.svc
