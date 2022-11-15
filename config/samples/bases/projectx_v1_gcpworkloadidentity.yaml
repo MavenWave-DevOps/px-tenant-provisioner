@@ -1,23 +1,23 @@
-#apiVersion: projectx.github.com/v1
-#kind: GcpWorkloadIdentity
-#metadata:
-#  name: gcpworkloadidentity-sample
-#  namespace: product1
-#  annotations:
-#    argocd.argoproj.io/sync-wave: "-10"
-#spec:
-#  workloadIdentityConfigs:
-#    - kubernetes:
-#        serviceAccountName: product1-consumer
-#        namespace: product1
-#      gcp:
-#        projectId: tony-sandbox-308422
-#        serviceAccountName: product1-consumer
-#        iamRoles:
-#          - "roles/iam.securityAdmin"
-#        auth:
-#          serviceAccountName: sa-workload-px-tnt-prov
-#          projectId: tony-sandbox-308422
-#          clusterLocation: us-central1
-#          clusterName: tidalwave-test
-#          namespace: default
+apiVersion: projectx.github.com/v1
+kind: GcpWorkloadIdentity
+metadata:
+  name: gcpworkloadidentity-sample
+  namespace: product1
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  workloadIdentityConfigs:
+    - kubernetes:
+        serviceAccountName: product1-consumer
+        namespace: product1
+      gcp:
+        projectId: tony-sandbox-308422
+        serviceAccountName: product1-consumer
+        iamRoles:
+          - "roles/iam.securityAdmin"
+        auth:
+          serviceAccountName: sa-workload-px-tnt-prov
+          projectId: tony-sandbox-308422
+          clusterLocation: us-central1
+          clusterName: tidalwave-test
+          namespace: default

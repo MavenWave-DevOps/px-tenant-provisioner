@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: gcr.io/tony-sandbox-308422/px-tenant-provisioner
-  newTag: "1666635446"
+  newTag: "1668532831"
