@@ -266,7 +266,10 @@ func CreateGcpWorkloadIdentities(ctx context.Context, config projectxv1.Workload
 	saService := iamclient.NewProjectsServiceAccountsService(service)
 	l.Info("Setting policy")
 	//Try waiting for SA to come all the way up
-	time.Sleep(time.Second * 5)
+	for i := 0; i < 5; i++ {
+		l.Info("Sleeping...")
+		time.Sleep(time.Second * 1)
+	}
 	r, err := saService.SetIamPolicy(account.Name, wlIdPolicyRequest).Do()
 	l.Info("policy was set")
 	if err != nil {
